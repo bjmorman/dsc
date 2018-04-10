@@ -11,7 +11,6 @@ Configuration WSUS {
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration
     Import-DscResource -ModuleName xComputerManagement
-    Import-DscResource -ModuleName xNetworking -ModuleVersion '5.5.0.0'
     Import-DscResource -ModuleName xPendingReboot 
 
     Node $computerName {
@@ -54,48 +53,17 @@ $config = @{
 }
 
 If ($isVagrant) {
-    $domainName = 'vagrant.local'
-    $nicAlias = 'Ethernet 2'
-    $dnsServers = '192.168.56.11'
-    $user = 'vagrant\administrator'
-    $password = 'vagrant' | ConvertTo-SecureString -asPlainText -Force
-    $domainCreds = New-Object `
-        -TypeName System.Management.Automation.PSCredential($user, $password)
-    $adfsSvcCreds = $domainCreds
-    $certThumbprint = 'aaf05276096d7777260661388c10381834b371f0'
-    $certPath = 'c:\vagrant\files\fs-vagrant-local.pfx' 
-    $certPassword = New-Object `
-        -TypeName System.Management.Automation.PSCredential('vagrant', $password)
-    $federationServiceName = 'fs.vagrant.local'
-
+    $computerName = 'win2012-wsus-1'
 }
 
 $args = @{
     'computerName'=$computerName
 }
 
-ADFS @args
+WSUSADFS @args
 
 #Ensure LCM is set to continue configuration after reboot            
-Set-DSCLocalConfigurationManager -Path .\ADFS -Verbose -Force       
+Set-DSCLocalConfigurationManager -Path .\WSUS -Verbose -Force       
             
 #Apply the configuration
-Start-DscConfiguration -Wait -Force -Path .\ADFS -Verbose
-
-
-#Build ADFS Farm
-Import-Module ADFS
-
-Try {
-    $farmStatus = Get-ADFSFarmInformation
-} Catch {
-    Install-AdfsFarm `
-        -CertificateThumbprint $certThumbprint `
-        -Credential $domainCreds `
-        -FederationServiceName $federationServiceName `
-        -FederationServiceDisplayName "Active Directory Federation Service" `
-        -ServiceAccountCredential $adfsSvcCreds `
-        -OverwriteConfiguration
-}
-
-. .\samanage-adfs-rely-party.ps1
+Start-DscConfiguration -Wait -Force -Path .\WSUS -Verbose
